@@ -5,13 +5,9 @@ use std::{
     process::{exit, Command},
 };
 
-static CURRENT_COMMIT_DIR: &str = "/var/lib/cano/current_commit.txt";
+use is_root::is_root;
 
-enum Commands {
-    Install,
-    Uninstall,
-    Update,
-}
+static CURRENT_COMMIT_DIR: &str = "/var/lib/cano/current_commit.txt";
 
 macro_rules! move_file {
     ($from:expr, $to:expr) => {
@@ -45,6 +41,11 @@ fn uninstall() {
 }
 
 fn main() {
+    if !is_root() {
+        println!("The installer must be run as root.");
+        exit(0);
+    }
+
     let mut args = args().collect::<Vec<_>>();
     args.remove(0);
     if args.len() != 1 {
