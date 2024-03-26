@@ -46,6 +46,11 @@ fn main() {
         exit(0);
     }
 
+    if Command::new("git").output().is_err() {
+        println!("You must have git installed.");
+        exit(0);
+    }
+
     let mut args = args().collect::<Vec<_>>();
     args.remove(0);
     if args.len() != 1 {
