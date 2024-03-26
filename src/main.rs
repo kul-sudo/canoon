@@ -6,6 +6,7 @@ use std::{
 };
 
 use is_root::is_root;
+use dialoguer::Confirm;
 
 static CURRENT_COMMIT_DIR: &str = "/var/lib/cano/current_commit.txt";
 
@@ -40,6 +41,23 @@ fn uninstall() {
     force_delete!("/var/lib/cano/");
 }
 
+fn update(cano_installed: bool, latest_commit_hash: &str) {
+    if cano_installed {
+        if let Ok(current_local_commit) = read_to_string(CURRENT_COMMIT_DIR) {
+            if current_local_commit == latest_commit_hash {
+                println!("Cano's up-to-date :O");
+            } else {
+                println!("An update's available! Installing it...");
+                uninstall();
+                install(&latest_commit_hash);
+                println!("Successfully installed.");
+            }
+        }
+    } else {
+        println!("Cano isn't installed.");
+    }
+}
+
 fn main() {
     if !is_root() {
         println!("The installer must be run as root.");
@@ -49,13 +67,6 @@ fn main() {
     if Command::new("git").output().is_err() {
         println!("You must have git installed.");
         exit(0);
-    }
-
-    let mut args = args().collect::<Vec<_>>();
-    args.remove(0);
-    if args.len() != 1 {
-        println!("The utility accepts one of these arguments: install, uninstall, update.");
-        exit(0)
     }
 
     // Get the latest commit of the main branch
@@ -77,12 +88,54 @@ fn main() {
 
     let cano_installed = Path::new("/usr/bin/cano").is_file();
 
+    let mut args = args().collect::<Vec<_>>();
+    args.remove(0);
+    if args.len() == 0 {
+        println!("Usage: canoon <install/uninstall/update>");
+        let should_install = Confirm::new()
+            .with_prompt("Do you want to install cano?")
+            .interact()
+            .unwrap();
+        
+        if should_install {
+            if cano_installed {
+                println!(
+                    "Cano is already installed."
+                );
+                let should_update = Confirm::new()
+                    .with_prompt("Do you want to update cano instead?")
+                    .interact()
+                    .unwrap();
+                
+                if should_update {
+                    update(cano_installed, &latest_commit_hash);
+                }
+            } else {
+                println!("Installing Cano...");
+                install(&latest_commit_hash);
+                println!("Successfully installed.");
+            }
+        }
+        exit(0);
+    } else if args.len() != 1 {
+        println!("Usage: canoon <install/uninstall/update>");
+        exit(0)
+    }
+
     match args.first().unwrap().as_str() {
         "install" => {
             if cano_installed {
                 println!(
-                    "Cano is already installed. If you're trying to update, use 'canoon update'."
+                    "Cano is already installed."
                 );
+                let should_update = Confirm::new()
+                    .with_prompt("Do you want to update cano instead?")
+                    .interact()
+                    .unwrap();
+                
+                if should_update {
+                    update(cano_installed, &latest_commit_hash);
+                }
             } else {
                 println!("Installing Cano...");
                 install(&latest_commit_hash);
@@ -99,23 +152,10 @@ fn main() {
             }
         }
         "update" => {
-            if cano_installed {
-                if let Ok(current_local_commit) = read_to_string(CURRENT_COMMIT_DIR) {
-                    if current_local_commit == latest_commit_hash {
-                        println!("Cano's up-to-date :O");
-                    } else {
-                        println!("An update's available! Installing it...");
-                        uninstall();
-                        install(&latest_commit_hash);
-                        println!("Successfully installed.");
-                    }
-                }
-            } else {
-                println!("Cano isn't installed.");
-            }
+            update(cano_installed, &latest_commit_hash);
         }
         _ => {
-            println!("An unavailable command has been used!");
+            println!("Usage: canoon <install/uninstall/update>");
         }
     }
 }
