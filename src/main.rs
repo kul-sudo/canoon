@@ -5,8 +5,8 @@ use std::{
     process::{exit, Command},
 };
 
-use is_root::is_root;
 use dialoguer::Confirm;
+use is_root::is_root;
 
 static CURRENT_COMMIT_DIR: &str = "/var/lib/cano/current_commit.txt";
 
@@ -49,7 +49,7 @@ fn update(cano_installed: bool, latest_commit_hash: &str) {
             } else {
                 println!("An update's available! Installing it...");
                 uninstall();
-                install(&latest_commit_hash);
+                install(latest_commit_hash);
                 println!("Successfully installed.");
             }
         }
@@ -90,17 +90,15 @@ fn main() {
 
     let mut args = args().collect::<Vec<_>>();
     args.remove(0);
-    if args.len() == 0 {
+    if args.is_empty() {
         println!("Usage: canoon <install/uninstall/update>");
         if cano_installed {
-            println!(
-                "Cano is installed."
-            );
+            println!("Cano is installed.");
             let should_update = Confirm::new()
                 .with_prompt("Do you want to update cano?")
                 .interact()
                 .unwrap();
-            
+
             if should_update {
                 update(cano_installed, &latest_commit_hash);
             }
@@ -109,7 +107,7 @@ fn main() {
                 .with_prompt("Do you want to install cano?")
                 .interact()
                 .unwrap();
-            
+
             if should_install {
                 println!("Installing Cano...");
                 install(&latest_commit_hash);
@@ -125,14 +123,12 @@ fn main() {
     match args.first().unwrap().as_str() {
         "install" => {
             if cano_installed {
-                println!(
-                    "Cano is already installed."
-                );
+                println!("Cano is already installed.");
                 let should_update = Confirm::new()
                     .with_prompt("Do you want to update cano instead?")
                     .interact()
                     .unwrap();
-                
+
                 if should_update {
                     update(cano_installed, &latest_commit_hash);
                 }
