@@ -1,11 +1,11 @@
 use std::{
     env::args,
-    fs::{create_dir, read_to_string, remove_file, write},
+    fs::{create_dir, create_dir_all, read_to_string, remove_file, write},
     path::Path,
     process::{exit, Command},
 };
 
-use dialoguer::Confirm;
+use dialoguer::Select;
 use is_root::is_root;
 
 static CURRENT_COMMIT_DIR: &str = "/var/lib/cano/current_commit.txt";
@@ -23,22 +23,27 @@ macro_rules! force_delete {
 }
 
 fn install(latest_commit_hash: &str) {
+    create_dir_all("~/.cache/canoon").unwrap();
     Command::new("git")
         .arg("clone")
         .arg("https://github.com/CobbCoding1/Cano")
+        .arg("~/.cache/canoon/Cano")
         .output()
         .unwrap();
 
-    Command::new("make").current_dir("./Cano").output().unwrap();
-    move_file!("./Cano/build/cano", "/usr/bin/");
+    Command::new("make")
+        .current_dir("~/.cache/canoon/Cano")
+        .output()
+        .unwrap();
+    move_file!("~/.cache/canoon/Cano/build/cano", "/usr/bin/");
     create_dir("/var/lib/cano/").unwrap();
     write(CURRENT_COMMIT_DIR, latest_commit_hash).unwrap();
-    force_delete!("./Cano");
+    force_delete!("~/.cache/canoon/");
 }
 
 fn uninstall() {
     remove_file("/usr/bin/cano").unwrap();
-    force_delete!("/var/lib/cano/");
+    force_delete!("/var/lib/cano");
 }
 
 fn update(cano_installed: bool, latest_commit_hash: &str) {
@@ -90,48 +95,19 @@ fn main() {
 
     let mut args = args().collect::<Vec<_>>();
     args.remove(0);
-    if args.is_empty() {
-        println!("Usage: canoon <install/uninstall/update>");
-        if cano_installed {
-            println!("Cano is installed.");
-            let should_update = Confirm::new()
-                .with_prompt("Do you want to update cano?")
-                .interact()
-                .unwrap();
 
-            if should_update {
-                update(cano_installed, &latest_commit_hash);
-            }
-        } else {
-            let should_install = Confirm::new()
-                .with_prompt("Do you want to install cano?")
-                .interact()
-                .unwrap();
+    let options = ["install", "uninstall", "update"];
 
-            if should_install {
-                println!("Installing Cano...");
-                install(&latest_commit_hash);
-                println!("Successfully installed.");
-            }
-        }
-        exit(0);
-    } else if args.len() != 1 {
-        println!("Usage: canoon <install/uninstall/update>");
-        exit(0)
-    }
-
-    match args.first().unwrap().as_str() {
+    match options[Select::new()
+        .with_prompt("What do you choose?")
+        .items(&options)
+        .default(0)
+        .interact()
+        .unwrap()]
+    {
         "install" => {
             if cano_installed {
                 println!("Cano is already installed.");
-                let should_update = Confirm::new()
-                    .with_prompt("Do you want to update cano instead?")
-                    .interact()
-                    .unwrap();
-
-                if should_update {
-                    update(cano_installed, &latest_commit_hash);
-                }
             } else {
                 println!("Installing Cano...");
                 install(&latest_commit_hash);
@@ -150,8 +126,6 @@ fn main() {
         "update" => {
             update(cano_installed, &latest_commit_hash);
         }
-        _ => {
-            println!("Usage: canoon <install/uninstall/update>");
-        }
+        _ => unreachable!(),
     }
 }
