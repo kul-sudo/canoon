@@ -1,3 +1,5 @@
+![logo](https://github.com/kul-sudo/canoon/assets/95244851/179b32aa-59c4-447a-aee1-f61edeb72e1f)
+
 # **How to use it?**
 
 ```bash
