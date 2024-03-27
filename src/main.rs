@@ -6,6 +6,7 @@ use std::{
 };
 
 use dialoguer::Select;
+use home::home_dir;
 use is_root::is_root;
 
 static CURRENT_COMMIT_DIR: &str = "/var/lib/cano/current_commit.txt";
@@ -22,23 +23,24 @@ macro_rules! force_delete {
     };
 }
 
-fn install(latest_commit_hash: &str) {
-    create_dir_all("~/.cache/canoon").unwrap();
+fn install(latest_commit_hash: &str, cano_cache_dir: &str) {
+    create_dir_all(cano_cache_dir).unwrap();
+    let cano_cloned_dir = &format!("{}/Cano", cano_cache_dir);
     Command::new("git")
         .arg("clone")
         .arg("https://github.com/CobbCoding1/Cano")
-        .arg("~/.cache/canoon/Cano")
+        .arg(cano_cloned_dir)
         .output()
         .unwrap();
 
     Command::new("make")
-        .current_dir("~/.cache/canoon/Cano")
+        .current_dir(cano_cloned_dir)
         .output()
         .unwrap();
-    move_file!("~/.cache/canoon/Cano/build/cano", "/usr/bin/");
+    move_file!(format!("{}/build/cano", cano_cloned_dir), "/usr/bin/");
     create_dir("/var/lib/cano/").unwrap();
     write(CURRENT_COMMIT_DIR, latest_commit_hash).unwrap();
-    force_delete!("~/.cache/canoon/");
+    force_delete!(cano_cache_dir);
 }
 
 fn uninstall() {
@@ -46,7 +48,7 @@ fn uninstall() {
     force_delete!("/var/lib/cano");
 }
 
-fn update(cano_installed: bool, latest_commit_hash: &str) {
+fn update(cano_installed: bool, latest_commit_hash: &str, cano_cache_dir: &str) {
     if cano_installed {
         if let Ok(current_local_commit) = read_to_string(CURRENT_COMMIT_DIR) {
             if current_local_commit == latest_commit_hash {
@@ -54,7 +56,7 @@ fn update(cano_installed: bool, latest_commit_hash: &str) {
             } else {
                 println!("An update's available! Installing it...");
                 uninstall();
-                install(latest_commit_hash);
+                install(latest_commit_hash, cano_cache_dir);
                 println!("Successfully installed.");
             }
         }
@@ -98,6 +100,8 @@ fn main() {
 
     let options = ["install", "uninstall", "update"];
 
+    let cano_cache_dir = format!("{}/.cache/canoon", home_dir().unwrap().to_string_lossy());
+
     match options[Select::new()
         .with_prompt("What do you choose?")
         .items(&options)
@@ -110,7 +114,7 @@ fn main() {
                 println!("Cano is already installed.");
             } else {
                 println!("Installing Cano...");
-                install(&latest_commit_hash);
+                install(&latest_commit_hash, &cano_cache_dir);
                 println!("Successfully installed.");
             }
         }
@@ -124,7 +128,7 @@ fn main() {
             }
         }
         "update" => {
-            update(cano_installed, &latest_commit_hash);
+            update(cano_installed, &latest_commit_hash, &cano_cache_dir);
         }
         _ => unreachable!(),
     }
