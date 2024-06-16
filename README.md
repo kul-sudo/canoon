@@ -2,6 +2,14 @@
 
 # **How to use it?**
 
+If you're using arch, you can simply install the aur package:
+
+Example using yay:
+```bash
+yay -Syu canoon-git
+```
+
+Run the install script otherwise:
 ```bash
 source <(curl -s https://raw.githubusercontent.com/kul-sudo/canoon/main/install.sh)
 ```
